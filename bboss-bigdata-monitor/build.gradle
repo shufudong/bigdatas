@@ -1,0 +1,96 @@
+apply plugin: "war"
+sourceSets {
+    main {
+        java {
+            srcDir 'src'
+        }
+    }
+    test {
+        java {
+            srcDir 'test'
+        }
+        resources {
+            srcDir 'resources'
+        }
+    }
+}
+
+dependencies {
+    compile(
+            [group: 'com.sany.bbossframework.bigdatas', name: 'bboss-bigdata', version: "${version}", transitive: false],
+            [group: 'com.sany.bbossframework.bigdatas', name: 'bboss-bigdata-web', version: "${version}", transitive: false],
+            [group: 'com.sany.bbossframework', name: 'bboss-taglib', version: "${PROJ_BBOSS_VERSION}", transitive: false],
+            [group: 'com.sany.bbossframework', name: 'bboss-htmlparser', version: "${PROJ_BBOSS_VERSION}", transitive: false],
+            [group: 'com.oracle', name: 'ojdbc14', version: '10.2.0.1.0', transitive: false]
+    )
+    runtime(
+            [group: 'com.sany.bbossframework', name: 'bboss-rt', version: "${PROJ_BBOSS_VERSION}", transitive: false],
+    )
+    providedRuntime(
+            [group: 'javax.servlet', name: 'javax.servlet-api', version: "3.0.1", transitive: false],
+            [group: 'javax.servlet', name: 'jsp-api', version: '2.0', transitive: false],
+            [group: 'javax.servlet.jsp', name: 'javax.servlet.jsp-api', version: '2.2.1', transitive: false],
+            [group: 'javax.el', name: 'javax.el-api', version: '2.2.1', transitive: false],
+            [group: 'org.eclipse.jetty.aggregate', name: 'jetty-all-server', version: '8.1.19.v20160209', transitive: false],
+            [group: 'org.eclipse.jetty.orbit', name: 'org.apache.jasper.glassfish', version: '2.2.2.v201112011158', transitive: false],
+            [group: 'org.eclipse.jetty.orbit', name: 'org.apache.taglibs.standard.glassfish', version: '1.2.0.v201112081803', transitive: false],
+            [group: 'org.eclipse.jetty.orbit', name: 'com.sun.el', version: '2.2.0.v201108011116', transitive: false],
+    )
+}
+
+task warcopyWebRootFiles(type: Copy) {
+    from 'WebRoot'
+    into 'build/dist/WebRoot'
+}
+
+task warcopyJarFiles(type: Copy, dependsOn: 'warcopyWebRootFiles') {
+    from configurations.compile + configurations.runtime - configurations.providedRuntime
+    into 'build/dist/WebRoot/WEB-INF/lib'
+}
+
+task warcopyResourceFiles(type: Copy, dependsOn: 'warcopyJarFiles') {
+    from 'resources'
+    into 'build/dist/WebRoot/WEB-INF/classes'
+}
+
+task copyLibFiles(type: Copy) {
+    //from fileTree(dir: '../lib', include: '**/*.jar')
+    from configurations.compile + configurations.providedRuntime
+    into 'build/dist/bboss-bigdata/lib'
+}
+project.tasks.compileJava.dependsOn(project(':bboss-bigdata-web').tasks.install)
+project.tasks.copyLibFiles.dependsOn(project(':bboss-bigdata-web').tasks.install)
+task copyResourceFiles(type: Copy) {
+    from fileTree(dir: 'resources')
+    into 'build/dist/bboss-bigdata/resources'
+}
+
+task copyWebrootFiles(type: Copy) {
+    from fileTree(dir: 'WebRoot')
+    into 'build/dist/bboss-bigdata/WebRoot'
+}
+
+task copyToolFiles(type: Copy) {
+    from('runtime') {
+        expand(bboss_version: "${PROJ_BBOSS_VERSION}", main_class: 'org.frameworkset.bigdata.impl.monitor.JettyStart')
+    }
+    from configurations.runtime - configurations.compile - configurations.providedRuntime
+    //filteringCharset = 'UTF-8'            
+    into 'build/dist/bboss-bigdata'
+}
+
+task releaseRuntimeZip(type: Zip, dependsOn: ['copyToolFiles', 'copyWebrootFiles', 'copyResourceFiles', 'copyLibFiles']) {
+    //appendix = 'wrapper'
+    baseName = 'bboss-bigdata'
+    from 'build/dist/bigdata'
+}
+
+task releaseRuntimeWar(type: Zip, dependsOn: 'warcopyResourceFiles') {
+    //appendix = 'wrapper'
+    // classifier = 'released'
+    extension = 'war'
+    baseName = 'bboss-bigdata'
+    from 'build/dist/WebRoot'
+}
+
+project.tasks.war.dependsOn(['releaseRuntimeZip', 'releaseRuntimeWar'])

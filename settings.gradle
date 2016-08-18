@@ -1,4 +1,4 @@
 rootProject.name = 'bigdatas'
-include 'bigdata'
-include 'bigdata-web'
-include 'bigdatamonitor'
+include 'bboss-bigdata'
+include 'bboss-bigdata-web'
+include 'bboss-bigdata-monitor'
